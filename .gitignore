@@ -16,3 +16,7 @@ tmtags
 # For vim:
 *.swp
 test/db/*
+
+build
+dist
+leaderboard.egg-info

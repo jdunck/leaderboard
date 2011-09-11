@@ -5,8 +5,11 @@ The intention is to track the implementation of upstream, except for adjustments
 
 This readme will be updated with python info as soon as it exists.
 
-It has been tested with python:
- * 2.6.5
+It has been tested with these pythons:
+ * CPython 2.6.5
+
+The intention is to support python 2.5-2.x.  
+Python3 is unsupported for now.
 
 It requires redis-py (https://github.com/andymccurdy/redis-py) and 
 anyjson (https://bitbucket.org/runeh/anyjson).
