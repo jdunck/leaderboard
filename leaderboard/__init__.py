@@ -19,6 +19,8 @@
     *should* add a convenience func to close all LB-owned redis conns.
 """
 from __future__ import division
+import math
+
 from functools import wraps
 from anyjson import loads, dumps
 from redis import Redis, ConnectionPool
@@ -90,7 +92,7 @@ class Leaderboard(object):
     def rank_member(self, member, score):
         self.rank_member_in(self.name, member, score)
     def rank_member_in(self, name, member, score):
-        self.redis.zadd(name, score, member)
+        self.redis.zadd(name, **{member: score})
 
     def remove_member(self, member):
         self.remove_member_from(self.name, member)
@@ -108,7 +110,7 @@ class Leaderboard(object):
         if page_size is None:
             page_size = self.page_size
   
-        return int(ceil(
+        return int(math.ceil(
             self.total_members_in(name) / 
             page_size
         ))
@@ -130,7 +132,7 @@ class Leaderboard(object):
     def change_score_for_member_in(self, name, member, delta):
         return self.redis.zincrby(name, member, delta)
   
-    def _conform_rank(rank, use_zero_index_for_rank):
+    def _conform_rank(self, rank, use_zero_index_for_rank):
         if rank is None or use_zero_index_for_rank:
             return rank
         return rank + 1
@@ -151,7 +153,7 @@ class Leaderboard(object):
     def check_member(self, member):
         return self.check_member_in(self.name, member)
     def check_member_in(self, name, member):
-        return self.redis.zscore(name, member) is None
+        return self.redis.zscore(name, member) is not None
 
     def score_and_rank_for(self, member, use_zero_index_for_rank=False):
         return self.score_and_rank_for_in(self.name, 
@@ -176,7 +178,7 @@ class Leaderboard(object):
             min_score, 
             max_score)
 
-    def _conform_page_size(**kwargs):
+    def _conform_page_size(self, **kwargs):
         page_size = kwargs.get('page_size', self.page_size)
         if page_size and page_size < 1:
           page_size = DEFAULT_PAGE_SIZE
@@ -184,7 +186,7 @@ class Leaderboard(object):
 
     def leaders(self, current_page, 
         **kwargs):
-        return leaders_in(self.name, current_page, **kwargs)
+        return self.leaders_in(self.name, current_page, **kwargs)
     def leaders_in(self, name, current_page=None, 
         **kwargs):
 
@@ -207,12 +209,12 @@ class Leaderboard(object):
         raw_leader_data = self.redis.zrevrange(name, 
             starting_offset, 
             ending_offset, 
-            with_scores=False)
+            False)
         if not raw_leader_data:
             return []
 
         return self.ranked_in_list_in(name, 
-            raw_leader_data, options)
+            raw_leader_data, **kwargs)
   
     def around_me(self, member, **kwargs):
         return self.around_me_in(self.name, member, **kwargs)
@@ -221,7 +223,7 @@ class Leaderboard(object):
     
         page_size = self._conform_page_size(**kwargs)
     
-        starting_offset = reverse_rank_for_member - (page_size / 2)
+        starting_offset = reverse_rank_for_member - int(page_size / 2)
         if starting_offset < 0:
             starting_offset = 0
 
@@ -230,7 +232,7 @@ class Leaderboard(object):
         raw_leader_data = self.redis.zrevrange(name, 
             starting_offset, 
             ending_offset, 
-            with_scores=False)
+            False)
         if not raw_leader_data:
             return []
         return self.ranked_in_list_in(name, 
@@ -238,27 +240,30 @@ class Leaderboard(object):
             **kwargs)
   
     def ranked_in_list(self, members, **kwargs):
-        return self.ranked_in_list_in(name, members, **kwargs)
+        return self.ranked_in_list_in(self.name, members, **kwargs)
     def ranked_in_list_in(self, name, members, **kwargs):
         with_rank = kwargs.get('with_rank',
             DEFAULT_LEADERBOARD_REQUEST_OPTIONS['with_rank'])
         with_scores = kwargs.get('with_scores',
             DEFAULT_LEADERBOARD_REQUEST_OPTIONS['with_scores'])
-
+        use_zero_index_for_rank = kwargs.get('use_zero_index_for_rank',
+            False)
         results = [{'member': member} for member in members]
         if not (with_rank or with_scores):
             return results
 
         responses = []
-        if with_rank and with_score:
+        if with_rank and with_scores:
             step = 2
             def process_result(i, rank, score):
-                results[i]['rank'] = rank
+                results[i]['rank'] = self._conform_rank(rank, 
+                    use_zero_index_for_rank)
                 results[i]['score'] = score
         elif with_rank:
             step = 1
             def process_result(i, rank):
-                results[i]['rank'] = rank
+                results[i]['rank'] = self._conform_rank(rank, 
+                    use_zero_index_for_rank)
         else: # with_score
             step = 1
             def process_result(i, score):
@@ -267,12 +272,12 @@ class Leaderboard(object):
         with self.redis.pipeline() as pipe:
             for member in members:
                 if with_rank:
-                    transaction.zrevrank(name, member)
+                    pipe.zrevrank(name, member)
                 if with_scores:
-                    transaction.zscore(name, member)
+                    pipe.zscore(name, member)
             responses = pipe.execute()
             for i in range(len(results)):
-                process_result(i, *responses[i*step:i*step+1])
+                process_result(i, *responses[i*step:(i+1)*step])
         return results
     
     # Merge leaderboards given by keys with this leaderboard into destination

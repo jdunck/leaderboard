@@ -25,7 +25,7 @@ class TestLeaderboard(unittest.TestCase):
         lb.teardown()
         self.conn = None
     
-    def _rank_members_in_leaderboard(members_to_add=5):
+    def _rank_members_in_leaderboard(self, members_to_add=5):
         for i in range(1, members_to_add+1):
             self.leaderboard.rank_member("member_%d" % i, i)
 
@@ -38,22 +38,21 @@ class TestLeaderboard(unittest.TestCase):
   
     def test_disconnect(self):
         # FIXME: what is assert nil really doing in ruby?
-        self.leaderboard.disconnect()
+        lb.teardown()
   
     def test_will_automatically_reconnect_after_a_disconnect(self):
         self.assertEqual(0, self.leaderboard.total_members())
         self._rank_members_in_leaderboard(5)
         self.assertEqual(5, self.leaderboard.total_members())
-        self.leaderboard.disconnect()
+        lb.teardown()
         self.assertEqual(5, self.leaderboard.total_members())
   
     def test_page_size_is_default_page_size_if_set_to_invalid_value(self):
         # FIXME: shouldn't this raise instead?
         some_leaderboard = lb.Leaderboard('name', page_size=0)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE,
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE,
             some_leaderboard.page_size)
-        some_leaderboard.disconnect()
   
     def test_delete_leaderboard(self):
         self._rank_members_in_leaderboard()
@@ -68,7 +67,7 @@ class TestLeaderboard(unittest.TestCase):
     
         self._rank_members_in_leaderboard()
 
-        self.assertEqual(1, r.info()['connected_clients'])
+        self.assertEqual(1, self.conn.info()['connected_clients'])
   
     def test_rank_member_and_total_members(self):
         self.leaderboard.rank_member('member', 1)
@@ -90,10 +89,10 @@ class TestLeaderboard(unittest.TestCase):
   
     def test_score_for(self):
         self._rank_members_in_leaderboard(5)
-        self.assertEqual(4, self.leaderboard.score_for('member_4')
+        self.assertEqual(4, self.leaderboard.score_for('member_4'))
   
     def test_total_pages(self):
-        self.assertTrue(10 < leaderboard.DEFAULT_PAGE_SIZE)
+        self.assertTrue(10 < lb.DEFAULT_PAGE_SIZE)
 
         self._rank_members_in_leaderboard(10)
 
@@ -101,7 +100,7 @@ class TestLeaderboard(unittest.TestCase):
 
         self.conn.flushdb()
 
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE + 1)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE + 1)
 
         self.assertEqual(2, self.leaderboard.total_pages())
   
@@ -114,15 +113,15 @@ class TestLeaderboard(unittest.TestCase):
         leaders = self.leaderboard.leaders(1)
             
         self.assertEqual(25, len(leaders))
-        self.assertEqual('member_25', leaders[0]['member']
-        self.assertEqual('member_2', leaders[-2]['member']
-        self.assertEqual('member_1', leaders[-1]['member']
+        self.assertEqual('member_25', leaders[0]['member'])
+        self.assertEqual('member_2', leaders[-2]['member'])
+        self.assertEqual('member_1', leaders[-1]['member'])
         self.assertEqual(1, leaders[-1]['score'])
   
     def test_leaders_with_multiple_pages(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE * 3 + 1)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE * 3 + 1)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE * 3 + 1, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE * 3 + 1, 
             self.leaderboard.total_members())
 
         for i in range(1,4):
@@ -146,14 +145,14 @@ class TestLeaderboard(unittest.TestCase):
             len(leaders))
   
     def test_leaders_without_retrieving_scores_and_ranks(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE,
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE,
             self.leaderboard.total_members())
 
         leaders = self.leaderboard.leaders(1, 
             with_scores=False, 
-            with_ranks=False)
+            with_rank=False)
 
         member_25 = {'member': 'member_25'}
         self.assertEqual(member_25, leaders[0])
@@ -162,9 +161,9 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(member_1, leaders[24])
   
     def test_around_me(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE * 3 + 1)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE * 3 + 1)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE * 3 + 1, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE * 3 + 1, 
             self.leaderboard.total_members())
 
         leaders_around_me = self.leaderboard.around_me('member_30')
@@ -175,18 +174,19 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(self.leaderboard.page_size / 2 + 1, 
             len(leaders_around_me))
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 25)
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 25)
         leaders_around_me = self.leaderboard.around_me('member_76')
         self.assertEqual(self.leaderboard.page_size / 2, 
             len(leaders_around_me) / 2)
   
     def test_ranked_in_list(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 
             self.leaderboard.total_members())
 
         members = ['member_1', 'member_5', 'member_10']
+
         ranked_members = self.leaderboard.ranked_in_list(members)
 
         self.assertEqual(3, len(ranked_members))
@@ -201,9 +201,9 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(10, ranked_members[2]['score'])    
   
     def test_ranked_in_list_without_scores(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 
             self.leaderboard.total_members())
 
         members = ['member_1', 'member_5', 'member_10']
@@ -221,14 +221,14 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(16, ranked_members[2]['rank'])
   
     def test_remove_member(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 
             self.leaderboard.total_members())
 
         self.leaderboard.remove_member('member_1')
 
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE - 1, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE - 1, 
             self.leaderboard.total_members())
         self.assertEqual(None, self.leaderboard.rank_for('member_1'))
   
@@ -236,7 +236,7 @@ class TestLeaderboard(unittest.TestCase):
         self.leaderboard.rank_member('member_1', 5)    
         self.assertEqual(5, self.leaderboard.score_for('member_1'))
 
-        self.leaderboard.change_score_for('member_1', 5))
+        self.leaderboard.change_score_for('member_1', 5)
         self.assertEqual(10, self.leaderboard.score_for('member_1'))
 
         self.leaderboard.change_score_for('member_1', -5)    
@@ -249,8 +249,8 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(False, self.leaderboard.check_member('member_2'))
   
     def test_can_change_page_size_and_have_it_reflected_in_size_of_result_set(self):
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 25)
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 25)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
         self.leaderboard.page_size = 5
 
@@ -258,11 +258,11 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual(5, len(self.leaderboard.leaders(1)))
 
     def test_cannot_set_page_size_to_invalid_page_size(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE)
 
         self.leaderboard.page_size = 0
         self.assertEqual(1, self.leaderboard.total_pages())
-        self.assertEqual(leaderboard.DEFAULT_PAGE_SIZE, 
+        self.assertEqual(lb.DEFAULT_PAGE_SIZE, 
             len(self.leaderboard.leaders(1)))
   
     def test_score_and_rank_for(self):
@@ -313,10 +313,7 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual('bar_3', first_leader_in_foobar['member'])
         self.assertEqual(5, first_leader_in_foobar['score'])
 
-        # FIXME: code smell; these conns should be cleaning up somewhere.
-        foo.disconnect()
-        bar.disconnect()
-        foobar.disconnect()
+        lb.teardown()
   
     def test_intersect_leaderboards(self):
         foo = lb.Leaderboard('foo')
@@ -342,9 +339,7 @@ class TestLeaderboard(unittest.TestCase):
         self.assertEqual('bar_3', first_leader_in_foobar['member'])
         self.assertEqual(6, first_leader_in_foobar['score'])
 
-        foo.disconnect()
-        bar.disconnect()
-        foobar.disconnect()
+        lb.teardown()
   
     def test_massage_leader_data_respects_with_scores(self):
         self._rank_members_in_leaderboard(25)
@@ -365,7 +360,7 @@ class TestLeaderboard(unittest.TestCase):
             with_rank=False)
         self.assertEqual(25, len(leaders))
 
-        self.leaderboard.page_size = leaderboard.DEFAULT_PAGE_SIZE
+        self.leaderboard.page_size = lb.DEFAULT_PAGE_SIZE
         leaders = self.leaderboard.leaders(1)
         self.assertNotEqual(None, leaders[0]['member'])
         self.assertNotEqual(None, leaders[0]['score'])
@@ -379,9 +374,11 @@ class TestLeaderboard(unittest.TestCase):
         self._rank_members_in_leaderboard(25)
 
         self.assertEqual(1, 
-            self.leaderboard.total_pages_in(self.leaderboard.leaderboard_name)
+            self.leaderboard.total_pages_in(self.leaderboard.name)
+        )
         self.assertEqual(5, 
-            self.leaderboard.total_pages_in(self.leaderboard.leaderboard_name, 5)
+            self.leaderboard.total_pages_in(self.leaderboard.name, 5)
+        )
 
     def test_leaders_call_with_new_page_size(self):
         self._rank_members_in_leaderboard(25)
@@ -400,9 +397,12 @@ class TestLeaderboard(unittest.TestCase):
         )
 
     def test_around_me_call_with_new_page_size(self):
-        self._rank_members_in_leaderboard(leaderboard.DEFAULT_PAGE_SIZE * 3 + 1)
+        self._rank_members_in_leaderboard(lb.DEFAULT_PAGE_SIZE * 3 + 1)
 
         leaders_around_me = self.leaderboard.around_me('member_30', page_size=3)
         self.assertEqual(3, len(leaders_around_me))
         self.assertEqual('member_31', leaders_around_me[0]['member'])
         self.assertEqual('member_29', leaders_around_me[2]['member'])
+
+if __name__ == '__main__':
+    unittest.main()
