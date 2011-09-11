@@ -195,8 +195,9 @@ class Leaderboard(object):
 
         page_size = self._conform_page_size(**kwargs)
     
-        if current_page > self.total_pages_in(name, page_size):
-            current_page = self.total_pages_in(name, page_size)
+        total_pages = self.total_pages_in(name, page_size)
+        if current_page > total_pages:
+            current_page = total_pages
     
         index_for_redis = current_page - 1
 
