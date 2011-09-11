@@ -1,3 +1,31 @@
+This is a port of https://github.com/agoragames/leaderboard 
+  (a ruby leaderboard library with redis as a backend) to python.
+
+The intention is to track the implementation of upstream, except for adjustments to make the interface pythonic.
+
+This readme will be updated with python info as soon as it exists.
+
+It has been tested with python:
+ * 2.6.5
+
+It requires redis-py (https://github.com/andymccurdy/redis-py) and 
+anyjson (https://bitbucket.org/runeh/anyjson).
+
+Installation: 
+  pip install -r requirements.pip
+
+
+Tracking the ruby upstream:
+  See the last_ported branch for the last version of upstream (ruby) which has made it into this master.  If you need this fork ported to a later upstream (for new features or bugfixes), just tell me.
+
+
+
+
+
+
+
+
+
 = leaderboard
 
 Leaderboards backed by Redis in Ruby, http://redis.io.
