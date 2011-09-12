@@ -35,10 +35,22 @@ class Leaderboard(object):
             delta
         )
     def decr(self, member, delta=1):
-        return self.incr(
-            self._conform_key(member), 
+        member = self._conform_key(member)
+        result = self.incr(
+            member,
             -1*delta
         )
+        if result >= 0:
+            return result
+
+        # well that's weird.
+        # increment it back and raise a ValueError
+        self.incr(
+            member,
+            delta
+        )
+        raise ValueError("Invalid decrement resulted in final value %d" % result)
+
     def get_rank_and_score(self, member):
         result = self.port.score_and_rank_for(
             self._conform_key(member)
